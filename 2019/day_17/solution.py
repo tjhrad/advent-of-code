@@ -126,16 +126,6 @@ def get_map(computer):
         elif out == 46:
             map[(x, y)] = "."
             x += 1
-        # elif out == 60:
-        #     row.append("<")
-        # elif out == 62:
-        #     row.append(">")
-        # elif out == 94:
-        #     row.append("^")
-        # elif out == 118:
-        #     row.append("v")
-        # elif out == 88:
-        #     row.append("X")
         elif out == 10:
             y += 1
             x = 0
