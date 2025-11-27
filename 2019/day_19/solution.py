@@ -101,7 +101,6 @@ def print_grid(grid):
 
     xs = [x for x, _ in grid.keys()]
     ys = [y for _, y in grid.keys()]
-
     xmin, xmax = min(xs), max(xs)
     ymin, ymax = min(ys), max(ys)
 
