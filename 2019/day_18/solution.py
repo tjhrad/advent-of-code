@@ -7,68 +7,158 @@ import heapq
 
 def part1(data):
     grid = get_grid(data)
-    print_grid(grid)
-    # get keys keys[ch] = (x, y)
     start, keys = get_start_and_keys(grid)
-    # bfs over each key pair and store the doors seens along each path
-
-    # Dijkstra over they key graph priority_queue = [(0, "@", 0)] # dist, current_key, keys_mask
-
-    #start, map, keys, doors = parse_data(data)
-    #path = find_keys(start_pos, map, keys, doors)
-    #answer = len(path)
-    answer = 0
+    reachable_from = {}
+    reachable_from['@'] = bfs_from(start, grid)
+    for key in keys.keys():
+        reachable_from[key] = bfs_from(keys[key], grid)
+    answer = dijkstra_shortest_path(reachable_from)
     print(f"\nPart 1: {answer}")
 
 
 def part2(data):
-    answer = 0
+    grid = get_grid(data)
+    start, keys = get_start_and_keys(grid)
+
+    sx, sy = start
+    grid[sy][sx] = "#"
+    grid[sy-1][sx] = "#"
+    grid[sy+1][sx] = "#"
+    grid[sy][sx-1] = "#"
+    grid[sy][sx+1] = "#"
+
+    starts = [
+        (sx+1, sy+1),
+        (sx-1, sy+1),
+        (sx+1, sy-1),
+        (sx-1, sy-1),
+    ]
+
+    robots = ['@', '$', '%', '!']
+    for (x, y), r in zip(starts, robots):
+        grid[y][x] = r
+
+    reachable_from = {}
+    for rpos, rname in zip(starts, robots):
+        reachable_from[rname] = bfs_from(rpos, grid)
+
+    for key, pos in keys.items():
+        reachable_from[key] = bfs_from(pos, grid)
+
+    answer = dijkstra_part2(reachable_from, starts)
     print(f"\nPart 2: {answer}")
 
 
-# def find_keys(start, map, keys, doors):
-#     # pos, [path], [keys_collected]
-#     DIRECTIONS = [(0, -1), (0, 1), (-1, 0), (1, 0)]
-#     queue = deque([[start, [], set()]])
-#     seen = set()
-#
-#     while queue:
-#         current_pos, current_path, current_keys = queue.popleft()
-#
-#         if len(current_keys) == len(keys):
-#             return current_path
-#
-#         #current_str = str(current_pos) + "-" + ''.join(str(x) for x in sorted(current_keys))
-#         #print(current_str)
-#         #seen.add(current_str)
-#
-#         for d in DIRECTIONS:
-#             next_pos = (current_pos[0] + d[0], current_pos[1] + d[1])
-#
-#             next_str = str(next_pos) + "-" + ''.join(str(x) for x in sorted(current_keys))
-#
-#             if next_str in seen:
-#                 continue
-#
-#             if next_pos not in map:
-#                 continue
-#
-#             if map[next_pos] == "#":
-#                 continue
-#
-#             if next_pos in doors and doors[next_pos].lower() not in current_keys:
-#                 continue
-#
-#             seen.add(next_str)
-#
-#             if next_pos in map and map[next_pos] == ".":
-#                 if next_pos in keys:
-#                     queue.append([next_pos, current_path + [next_pos], current_keys | set(keys[next_pos])])
-#                 else:
-#                     queue.append([next_pos, current_path + [next_pos], current_keys])
-#
-#     print("No path found.")
-#     return None
+def bfs_from(pos, grid):
+    dirs = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+    q = deque([(pos, 0, 0)]) # ((x,y), distance, requirements_mask)
+    seen = {pos}
+    results = {} # key -> (dist, requirement_mask)
+
+    while q:
+        (x, y), dist, req = q.popleft()
+        ch = grid[y][x]
+
+        if 'A' <= ch <= 'Z':
+            req |= 1 << (ord(ch.lower()) - ord('a'))
+
+        if 'a' <= ch <= 'z':
+            results[ch] = (dist, req)
+
+        for dx, dy in dirs:
+            nx, ny = x + dx, y + dy
+            if (nx, ny) not in seen and grid[ny][nx] != "#":
+                seen.add((nx, ny))
+                q.append(((nx, ny), dist + 1, req))
+
+    return results
+
+
+def dijkstra_part2(reachable_from, starts):
+    ALL_KEYS = 0
+    for k in reachable_from.keys():
+        if k == '@':
+            continue
+
+        if 'a' <= k <= 'z':
+            ALL_KEYS |= 1 << (ord(k) - ord('a'))
+
+    robot_labels = ['@', '$', '%', '!']
+    start_positions = tuple(robot_labels)
+
+    pq = [(0, start_positions, 0)]
+    best = {}
+
+    while pq:
+        dist, positions, mask = heapq.heappop(pq)
+
+        if mask == ALL_KEYS:
+            return dist
+
+        if best.get((positions, mask), float('inf')) <= dist:
+            continue
+        best[(positions, mask)] = dist
+
+        for i in range(4):
+            cur = positions[i]
+
+            for key, (d, req) in reachable_from[cur].items():
+
+                bit = 1 << (ord(key) - ord('a'))
+
+                if mask & bit:
+                    continue
+
+                if req & ~mask:
+                    continue
+
+                new_positions = list(positions)
+                new_positions[i] = key
+                new_positions = tuple(new_positions)
+
+                newmask = mask | bit
+
+                heapq.heappush(pq, (dist + d, new_positions, newmask))
+
+    return None
+
+
+def dijkstra_shortest_path(reachable_from):
+    ALL_KEYS = 0
+    for k in reachable_from.keys():
+        if k == '@':
+            continue
+
+        if 'a' <= k <= 'z':
+            ALL_KEYS |= 1 << (ord(k) - ord('a'))
+    
+    pq = [(0, "@", 0)] # dist, current_key, keys_mask
+    best = {}
+
+    while pq:
+        dist, cur, mask = heapq.heappop(pq)
+
+        if mask == ALL_KEYS:
+            return dist
+
+        if (cur, mask) in best and best[(cur, mask)] <= dist:
+            continue
+
+        best[(cur, mask)] = dist
+
+        for key, (d, req) in reachable_from[cur].items():
+            bit = 1 << (ord(key) - ord('a'))
+
+            if mask & bit:
+                continue
+
+            if req & ~mask:
+                continue
+
+            newmask = mask | bit
+            heapq.heappush(pq, (dist + d, key, newmask))
+
+    return None
 
 
 def print_grid(grid):
@@ -93,36 +183,6 @@ def get_start_and_keys(grid):
             if 'a' <= ch <= 'z':
                 keys[ch] = (x,y)
     return start, keys
-
-
-# def parse_data(data):
-#     x, y = 0, 0
-#     start_pos = None
-#     map = defaultdict(str)
-#     keys = defaultdict(str)
-#     doors = defaultdict(str)
-#
-#     for line in data:
-#         for c in line:
-#             if c in "#.":
-#                 map[(x, y)] = c
-#             elif c == "@":
-#                 map[(x, y)] = "."
-#                 start_pos = (x, y)
-#             elif c.islower():
-#                 map[(x, y)] = "."
-#                 keys[(x, y)] = c
-#             elif c.isupper():
-#                 map[(x, y)] = "."
-#                 doors[(x, y)] = c
-#             else:
-#                 map[(x, y)] = "."
-#
-#             x += 1
-#         y += 1
-#         x = 0
-#
-#     return start_pos, map, keys, doors
 
 
 with open("./input.txt", "r") as f:
