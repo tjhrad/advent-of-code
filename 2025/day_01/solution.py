@@ -5,13 +5,33 @@ import time
 from helpers import format_time, read_input
 
 
-def part1(data):
+def part1(raw_input):
+    pointer = 50
     answer = 0
+    for seq in raw_input:
+        if seq[0] == 'L':
+            pointer = (pointer - int(seq[1:])) % 100
+        elif seq[0] == 'R':
+            pointer = (pointer + int(seq[1:])) % 100
+        if pointer == 0:
+            answer += 1
     print(f"\nPart 1: {answer}")
 
 
-def part2(data):
+def part2(raw_input):
+    pointer = 50
     answer = 0
+    for seq in raw_input:
+        if seq[0] == 'L':
+            for _ in range(int(seq[1:])):
+                pointer = (pointer - 1) % 100
+                if pointer == 0:
+                    answer += 1
+        elif seq[0] == 'R':
+            for _ in range(int(seq[1:])):
+                pointer = (pointer + 1) % 100
+                if pointer == 0:
+                    answer += 1
     print(f"\nPart 2: {answer}")
 
 
