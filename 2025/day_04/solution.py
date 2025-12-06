@@ -56,8 +56,8 @@ def count_accessible_rolls(rolls):
 
 def accessible(x, y, rolls):
     n_adjacent = 0
-    for dx, dy in [(x+1, y), (x-1, y), (x, y+1), (x, y-1), (x-1, y-1), (x+1, y+1), (x+1, y-1), (x-1, y+1)]:
-        if (dx, dy) in rolls:
+    for nx, ny in [(x+1, y), (x-1, y), (x, y+1), (x, y-1), (x-1, y-1), (x+1, y+1), (x+1, y-1), (x-1, y+1)]:
+        if (nx, ny) in rolls:
             n_adjacent += 1
     if n_adjacent < 4:
         return True
