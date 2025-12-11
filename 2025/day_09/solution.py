@@ -6,6 +6,7 @@ from helpers import format_time, read_input
 
 import heapq
 from itertools import combinations
+from shapely import box, Polygon
 
 
 def part1(data):
@@ -16,64 +17,32 @@ def part1(data):
         a = area(p1, p2)
         if a > max:
             max = a
+
     answer = max
     print(f"\nPart 1: {answer}")
 
 
 def part2(data):
     points = parse(data)
+    poly = Polygon(points)
+
+    def is_rect_in_polygon(p1, p2):
+        rect = box(p1[0], p1[1], p2[0], p2[1])
+        return poly.contains(rect)
 
     hq = []
     for p1, p2 in combinations(points, 2):
         a = area(p1, p2)
         heapq.heappush(hq, (-a, (p1, p2)))
 
-    # TODO: Compute vertical and horizontal segments. Then use those to check for invalid rectangles
-    h_lines = []
-    v_lines = []
-
-    def is_valid(p1, p2):
-        x1, y1 = p1
-        x2, y2 = p2
-        intercepts = []
-        for p in points:
-            x, y = p
-            if p == p1 or p == p2:
-                continue
-
-            if min(x1, x2) < x < max(x1, x2):
-                if min(y1, y2) < y < max(y1, y2):
-                    return False
-
-            # TODO: Replace with h/v line intercepts
-            if x == x1 or x == x2:
-                if min(y1, y2) < y < max(y1, y2):
-                    intercepts.append((x, y))
-            elif y == y1 or y == y2:
-                if min(x1, x2) < x < max(x1, x2):
-                    intercepts.append((x, y))
-            
-        xi = [x for x, y in intercepts]
-        yi = [y for x, y in intercepts]
-
-        print(xi)
-        print(yi)
-        if len(xi) > len(set(xi)):
-            return False
-        elif len(yi) > len(set(yi)):
-            return False
-
-        return True
-
     answer = 0
     while hq:
         a, (p1, p2) = heapq.heappop(hq)
-        a = abs(a)
-        #print(f"{a} - {p1} - {p2}")
 
-        if is_valid(p1, p2):
-            answer = a
+        if is_rect_in_polygon(p1, p2):
+            answer = abs(a)
             break
+
     print(f"\nPart 2: {answer}")
 
 
@@ -84,11 +53,12 @@ def area(p1, p2):
     w = abs(y2 - y1) + 1
     return (h*w)
 
+
 def parse(data):
-    points = set()
+    points = []
     for l in data:
         x, y = [int(n) for n in l.split(",")]
-        points.add((x, y))
+        points.append((x, y))
     return points
 
 
